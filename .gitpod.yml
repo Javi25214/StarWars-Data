@@ -1,14 +1,10 @@
-# Command to start on workspace startup (optional)
-tasks:
-  - before: nvm install 16
-    init: npm install;
-    command: npm run start;
-# Ports to expose on workspace startup (optional)
+image:
+  file: .gitpod.dockerfile
 ports:
-  - port: 3000
-    onOpen: open-preview
-    visibility: public
-
-vscode:
-  extensions:
-    - esbenp.prettier-vscode
+    - port: 3000
+      onOpen: open-preview
+tasks:
+    - init: >
+        pip install pipenv==2022.1.8;
+        pipenv install;
+    - command: python3 welcome.py
