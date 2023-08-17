@@ -1,58 +1,77 @@
-import os
-import sys
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
-from sqlalchemy import create_engine
-from eralchemy2 import render_er
+
+engine = create_engine('sqlite:///:memory:', echo=True)
 
 Base = declarative_base()
 
+user_favorite_planet = Table(
+    'user_favorite_planet', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('planet_id', Integer, ForeignKey('planets.id'))
+)
+
+user_favorite_character = Table(
+    'user_favorite_character', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('character_id', Integer, ForeignKey('characters.id'))
+)
 
 class User(Base):
-    __tablename__ = "user"
-    id = Column(Integer, primary_key=True)
-    username = Column(String(250), nullable=False)
-    firstname = Column(String(250), nullable=False)
-    lastname = Column(String(250), nullable=False)
-    email = Column(String(250), nullable=False)
-
-    class Comment(Base):
-        __tablename__ = "comment"
-        post_id = Columm(Integer, FOreingKey ("post.id"), primary_key=True)
-        comment_text = Column(String(250), nullable=False)
-        author_id = Column(Integer, ForeignKey("user.id"))
-
-class Post(Base):
-    __tablename__ = "post"
-    user_id = Column(Integer, ForeignKey('user.id'))
-    id = Columm(Post)
-
-class MediaEnum(enum.Enum):
-    photo = 1
-    video = 2
-
-    class Media(Base):
-    __tablename__ = "media"
-    id = Column(Integer, primary_key=True)
-    type = Column(Enum(MediaEnum))
-    url = Column(String)
-    post_id = Column(Integer, ForeignKey('post.id'))
-    post = relationship(Post)
-
-    class Follower(Base):
-    __tablename__ = "follower"
-    id = Column(Integer, primary_key=True)
-    user_from_id = Column (Integer, ForeignKey("user.id"))
-    user_to_id = Column (Integer, ForeignKey("user.id"))
-
-
-    def to_dict(self):
-        return {}
+    __tablename__ = 'users'
     
-try:
-    result = render_er(Base, 'diagram.png')
-    print("Success! Check the diagram.png file")
-except Exception as e:
-    print("There was a problem genering the diagram")
-    raise e
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True)
+    email = Column(String, unique=True)
+    password = Column(String)  
+    subscription_date = Column(String)  
+    first_name = Column(String)
+    last_name = Column(String)
+    
+
+    favorite_planets = relationship('Planet', secondary=user_favorite_planet, back_populates='favorited_by')
+    
+
+    favorite_characters = relationship('Character', secondary=user_favorite_character, back_populates='favorited_by')
+
+class Planet(Base):
+    __tablename__ = 'planets'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    climate = Column(String)
+    terrain = Column(String)
+    
+
+    favorited_by = relationship('User', secondary=user_favorite_planet, back_populates='favorite_planets')
+
+class Character(Base):
+    __tablename__ = 'characters'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    height = Column(String)
+    mass = Column(String)
+    
+    favorited_by = relationship('User', secondary=user_favorite_character, back_populates='favorite_characters')
+
+Base.metadata.create_all(engine)
+
+
+Session = sessionmaker(bind=engine)
+session = Session()
+
+user = User(username='luke_skywalker', email='luke@example.com', password='password', subscription_date='2023-08-17', first_name='Luke', last_name='Skywalker')
+planet = Planet(name='Tatooine', climate='Arid', terrain='Desert')
+character = Character(name='Darth Vader', height='2.03m', mass='136kg')
+
+user.favorite_planets.append(planet)
+user.favorite_characters.append(character)
+
+session.add(user)
+session.add(planet)
+session.add(character)
+session.commit()
+
+print("Base de datos creada y datos agregados.")
